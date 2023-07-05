@@ -3555,66 +3555,7 @@ class Segmentation(SOPClass):
             explanation.
 
         """
-        # Check that indexing in this way is possible
-        self._check_indexing_with_source_frames(ignore_spatial_locations)
-
-        # Checks on validity of the inputs
-        if segment_numbers is None:
-            segment_numbers = list(self.segment_numbers)
-        if len(segment_numbers) == 0:
-            raise ValueError(
-                'Segment numbers may not be empty.'
-            )
-
-        if len(source_frame_numbers) == 0:
-            raise ValueError(
-                'Source frame numbers should not be empty.'
-            )
-        if not all(f > 0 for f in source_frame_numbers):
-            raise ValueError(
-                'Frame numbers are 1-based indices and must be > 0.'
-            )
-
-        # Check that the combination of frame numbers and segment numbers
-        # uniquely identify segmentation frames
-        if not self._db_man.are_referenced_frames_unique():
-            raise RuntimeError(
-                'Source frame numbers and segment numbers do not '
-                'uniquely identify frames of the segmentation image.'
-            )
-
-        # Check that all frame numbers requested actually exist
-        if not assert_missing_frames_are_empty:
-            max_frame_number = self._db_man.get_max_frame_number()
-            for f in source_frame_numbers:
-                if f > max_frame_number:
-                    msg = (
-                        f'Source frame number {f} is larger than any '
-                        'referenced source frame, so highdicom cannot be '
-                        'certain that it is valid. To return an empty '
-                        'segmentation mask in this situation, use the '
-                        "'assert_missing_frames_are_empty' parameter."
-                    )
-                    raise ValueError(msg)
-
-        with self._db_man.iterate_indices_by_source_frame(
-            source_sop_instance_uid=source_sop_instance_uid,
-            source_frame_numbers=source_frame_numbers,
-            segment_numbers=segment_numbers,
-            combine_segments=combine_segments,
-            relabel=relabel,
-        ) as indices:
-
-            return self._get_pixels_by_seg_frame(
-                num_output_frames=len(source_frame_numbers),
-                indices_iterator=indices,
-                segment_numbers=np.array(segment_numbers),
-                combine_segments=combine_segments,
-                relabel=relabel,
-                rescale_fractional=rescale_fractional,
-                skip_overlap_checks=skip_overlap_checks,
-                dtype=dtype,
-            )
+        pass
 
     def get_pixels_by_dimension_index_values(
         self,

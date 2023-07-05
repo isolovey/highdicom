@@ -3409,6 +3409,213 @@ class Segmentation(SOPClass):
                 dtype=dtype,
             )
 
+    def get_pixels_by_tile_position(
+        self,
+        row_start: Optional[int] = None,
+        row_stop: Optional[int] = None,
+        column_start: Optional[int] = None,
+        column_stop: Optional[int] = None,
+        segment_numbers: Optional[Sequence[int]] = None,
+        combine_segments: bool = False,
+        relabel: bool = False,
+        ignore_spatial_locations: bool = False,
+        assert_missing_frames_are_empty: bool = False,
+        rescale_fractional: bool = True,
+        skip_overlap_checks: bool = False,
+        dtype: Union[type, str, np.dtype, None] = None,
+    ):
+        """Get a pixel array for a 2D region of a tiled image.
+
+        This is intended for retrieving segmentation masks derived from
+        multi-frame (enhanced) Segmentations that are tiled. The returned array
+        comprises frames arranged in the correct 2D tiled position.
+
+        The output array will have 3 dimensions under the default behavior, and
+        2 dimensions if ``combine_segments`` is set to ``True``. The first two
+        dimensions are the rows and columns of the frames, respectively. By
+        default, the entire tiled array is retuned. A rectangular sub-region of
+        the entire image may instead be requested by specifying ``row_start``,
+        ``row_stop``, ``column_start``, and/or ``column_stop`` to give the
+        start and stop row/column position. DICOM coordinate conventions are
+        followed, meaning that indices are 1-based and run from 1 (top/left of
+        image) to TotalPixelMatrixRows/TotalPixelMatrixColumns (bottom/right of
+        the image). However following Python conventions stop indices are
+        exclusive, meaning that the last returned tile is one before the
+        supplied stop index. If ``row_start`` or ``column_stop`` are omitted
+        (or ``None``), a value of 1 is used. If ``row_stop`` is omitted (or
+        ``None``) a value of ``TotalPixelMatrixRows + 1`` is used and,
+        similarly, if ``column_stop`` is omitted (or ``None``) a value of
+        ``TotalPixelMatrixColumns + 1`` is used.
+
+        When ``combine_segments`` is ``False`` (the default behavior), the
+        segments are stacked down the final (3rd) dimension of the pixel array.
+        If ``segment_numbers`` was specified, then ``pixel_array[:, :, i]``
+        represents the data for segment ``segment_numbers[i]``. If
+        ``segment_numbers`` was unspecified, then ``pixel_array[:, :, i]``
+        represents the data for segment ``seg.segment_numbers[i]``. Note
+        that in neither case does ``pixel_array[:, :, i]`` represent
+        the segmentation data for the segment with segment number ``i``, since
+        segment numbers begin at 1 in DICOM.
+
+        When ``combine_segments`` is ``True``, then the segmentation data from
+        all specified segments is combined into a multi-class array in which
+        pixel value is used to denote the segment to which a pixel belongs.
+        This is only possible if the segments do not overlap and either the
+        type of the segmentation is ``BINARY`` or the type of the segmentation
+        is ``FRACTIONAL`` but all values are exactly 0.0 or 1.0.  the segments
+        do not overlap. If the segments do overlap, a ``RuntimeError`` will be
+        raised. After combining, the value of a pixel depends upon the
+        ``relabel`` parameter. In both cases, pixels that appear in no segments
+        with have a value of ``0``.  If ``relabel`` is ``False``, a pixel that
+        appears in the segment with segment number ``i`` (according to the
+        original segment numbering of the segmentation object) will have a
+        value of ``i``. If ``relabel`` is ``True``, the value of a pixel in
+        segment ``i`` is related not to the original segment number, but to the
+        index of that segment number in the ``segment_numbers`` parameter of
+        this method. Specifically, pixels belonging to the segment with segment
+        number ``segment_numbers[i]`` is given the value ``i + 1`` in the
+        output pixel array (since 0 is reserved for pixels that belong to no
+        segments). In this case, the values in the output pixel array will
+        always lie in the range ``0`` to ``len(segment_numbers)`` inclusive.
+
+        Parameters
+        ----------
+        row_start: Optional[int], optional
+            Row position of the top-most returned tile. 1-based index.
+        row_stop: Optional[int], optional
+            Row position of one tile beyond the bottom-most returned tile.
+            1-based index.
+        column_start: Optional[int], optional
+            Column position of the left-most returned tile. 1-based index.
+        column_stop: Optional[int], optional
+            Column position of the one beyond right-most returned tile. 1-based
+            index.
+        segment_numbers: Optional[Sequence[int]], optional
+            Sequence containing segment numbers to include. If unspecified,
+            all segments are included.
+        combine_segments: bool, optional
+            If True, combine the different segments into a single label
+            map in which the value of a pixel represents its segment.
+            If False (the default), segments are binary and stacked down the
+            last dimension of the output array.
+        relabel: bool, optional
+            If True and ``combine_segments`` is ``True``, the pixel values in
+            the output array are relabelled into the range ``0`` to
+            ``len(segment_numbers)`` (inclusive) according to the position of
+            the original segment numbers in ``segment_numbers`` parameter.  If
+            ``combine_segments`` is ``False``, this has no effect.
+        ignore_spatial_locations: bool, optional
+           Ignore whether or not spatial locations were preserved in the
+           derivation of the segmentation frames from the source frames. In
+           some segmentation images, the pixel locations in the segmentation
+           frames may not correspond to pixel locations in the frames of the
+           source image from which they were derived. The segmentation image
+           may or may not specify whether or not spatial locations are
+           preserved in this way through use of the optional (0028,135A)
+           SpatialLocationsPreserved attribute. If this attribute specifies
+           that spatial locations are not preserved, or is absent from the
+           segmentation image, highdicom's default behavior is to disallow
+           indexing by source frames. To override this behavior and retrieve
+           segmentation pixels regardless of the presence or value of the
+           spatial locations preserved attribute, set this parameter to True.
+        assert_missing_frames_are_empty: bool, optional
+            Assert that requested source frame numbers that are not referenced
+            by the segmentation image contain no segments. If a source frame
+            number is not referenced by the segmentation image and is larger
+            than the frame number of the highest referenced frame, highdicom is
+            unable to check that the frame number is valid in the source image.
+            By default, highdicom will raise an error in this situation. To
+            override this behavior and return a segmentation frame of all zeros
+            for such frames, set this parameter to True.
+        rescale_fractional: bool
+            If this is a FRACTIONAL segmentation and ``rescale_fractional`` is
+            True, the raw integer-valued array stored in the segmentation image
+            output will be rescaled by the MaximumFractionalValue such that
+            each pixel lies in the range 0.0 to 1.0. If False, the raw integer
+            values are returned. If the segmentation has BINARY type, this
+            parameter has no effect.
+        skip_overlap_checks: bool
+            If True, skip checks for overlap between different segments. By
+            default, checks are performed to ensure that the segments do not
+            overlap. However, this reduces performance. If checks are skipped
+            and multiple segments do overlap, the segment with the highest
+            segment number (after relabelling, if applicable) will be placed
+            into the output array.
+        dtype: Union[type, str, numpy.dtype, None]
+            Data type of the returned array. If None, an appropriate type will
+            be chosen automatically. If the returned values are rescaled
+            fractional values, this will be numpy.float32. Otherwise, the
+            smallest unsigned integer type that accommodates all of the output
+            values will be chosen.
+
+        Returns
+        -------
+        pixel_array: np.ndarray
+            Pixel array representing the segmentation. See notes for full
+            explanation.
+
+        """
+        # Check that indexing in this way is possible
+        self._check_indexing_with_source_frames(ignore_spatial_locations)
+
+        # Checks on validity of the inputs
+        if segment_numbers is None:
+            segment_numbers = list(self.segment_numbers)
+        if len(segment_numbers) == 0:
+            raise ValueError(
+                'Segment numbers may not be empty.'
+            )
+
+        if len(source_frame_numbers) == 0:
+            raise ValueError(
+                'Source frame numbers should not be empty.'
+            )
+        if not all(f > 0 for f in source_frame_numbers):
+            raise ValueError(
+                'Frame numbers are 1-based indices and must be > 0.'
+            )
+
+        # Check that the combination of frame numbers and segment numbers
+        # uniquely identify segmentation frames
+        if not self._db_man.are_referenced_frames_unique():
+            raise RuntimeError(
+                'Source frame numbers and segment numbers do not '
+                'uniquely identify frames of the segmentation image.'
+            )
+
+        # Check that all frame numbers requested actually exist
+        if not assert_missing_frames_are_empty:
+            max_frame_number = self._db_man.get_max_frame_number()
+            for f in source_frame_numbers:
+                if f > max_frame_number:
+                    msg = (
+                        f'Source frame number {f} is larger than any '
+                        'referenced source frame, so highdicom cannot be '
+                        'certain that it is valid. To return an empty '
+                        'segmentation mask in this situation, use the '
+                        "'assert_missing_frames_are_empty' parameter."
+                    )
+                    raise ValueError(msg)
+
+        with self._db_man.iterate_indices_by_source_frame(
+            source_sop_instance_uid=source_sop_instance_uid,
+            source_frame_numbers=source_frame_numbers,
+            segment_numbers=segment_numbers,
+            combine_segments=combine_segments,
+            relabel=relabel,
+        ) as indices:
+
+            return self._get_pixels_by_seg_frame(
+                num_output_frames=len(source_frame_numbers),
+                indices_iterator=indices,
+                segment_numbers=np.array(segment_numbers),
+                combine_segments=combine_segments,
+                relabel=relabel,
+                rescale_fractional=rescale_fractional,
+                skip_overlap_checks=skip_overlap_checks,
+                dtype=dtype,
+            )
+
     def get_pixels_by_dimension_index_values(
         self,
         dimension_index_values: Sequence[Sequence[int]],

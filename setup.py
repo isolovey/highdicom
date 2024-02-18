@@ -59,7 +59,7 @@ setuptools.setup(
         'libjpeg': [
             'pylibjpeg>=1.4',
             'pylibjpeg-libjpeg>=1.3',
-            'pylibjpeg-openjpeg>=1.2'
+            'pylibjpeg-openjpeg>=2.1.0'
         ],
     },
 )

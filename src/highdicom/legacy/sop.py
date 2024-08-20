@@ -187,6 +187,27 @@ def _convert_legacy_to_enhanced(
             plane_position_item,
         ]
 
+        # Plane Orientation (Patient) (M)
+        plane_orientation_item = Dataset()
+        plane_orientation_item.ImageOrientationPatient = \
+            ds.ImageOrientationPatient
+        perframe_item.PlaneOrientationSequence = [
+            plane_orientation_item,
+        ]
+
+        # Pixel Measures (M)
+        pixel_measures_item = Dataset()
+        pixel_measures_item.PixelSpacing = ds.PixelSpacing
+        pixel_measures_item.SliceThickness = ds.SliceThickness
+        try:
+            pixel_measures_item.SpacingBetweenSlices = \
+                ds.SpacingBetweenSlices
+        except AttributeError:
+            pass
+        perframe_item.PixelMeasuresSequence = [
+            pixel_measures_item,
+        ]
+
         frame_type = list(ds.ImageType)
         if len(frame_type) < 4:
             if frame_type[0] == 'ORIGINAL':
@@ -354,27 +375,6 @@ def _convert_legacy_to_enhanced(
 
     # Shared Functional Groups
     shared_item = Dataset()
-
-    # Pixel Measures (M)
-    pixel_measures_item = Dataset()
-    pixel_measures_item.PixelSpacing = ref_ds.PixelSpacing
-    pixel_measures_item.SliceThickness = ref_ds.SliceThickness
-    try:
-        pixel_measures_item.SpacingBetweenSlices = \
-            ref_ds.SpacingBetweenSlices
-    except AttributeError:
-        pass
-    shared_item.PixelMeasuresSequence = [
-        pixel_measures_item,
-    ]
-
-    # Plane Orientation (Patient) (M)
-    plane_orientation_item = Dataset()
-    plane_orientation_item.ImageOrientationPatient = \
-        ref_ds.ImageOrientationPatient
-    shared_item.PlaneOrientationSequence = [
-        plane_orientation_item,
-    ]
 
     shared_item.UnassignedSharedConvertedAttributesSequence = [
         unassigned_shared_ca_item,

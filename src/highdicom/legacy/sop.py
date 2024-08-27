@@ -240,22 +240,25 @@ def _convert_legacy_to_enhanced(
                 frame_type_item,
             ]
 
-            # CT Pixel Value Transformation (M)
-            pixel_val_transform_item = Dataset()
+        elif sop_class_uid == '1.2.840.10008.5.1.4.1.1.128.1':
+            # PET Image Frame Type (M)
+            perframe_item.PETImageFrameTypeSequence = [
+                frame_type_item,
+            ]
+
+        # Pixel Value Transformation (M)
+        pixel_val_transform_item = Dataset()
+        if 'RescaleIntercept' in ds:
             pixel_val_transform_item.RescaleIntercept = ds.RescaleIntercept
+        if 'RescaleSlope' in ds:
             pixel_val_transform_item.RescaleSlope = ds.RescaleSlope
+        if 'RescaleIntercept' in ds or 'RescaleSlope' in ds:
             try:
                 pixel_val_transform_item.RescaleType = ds.RescaleType
             except AttributeError:
                 pixel_val_transform_item.RescaleType = 'US'
             perframe_item.PixelValueTransformationSequence = [
                 pixel_val_transform_item,
-            ]
-
-        elif sop_class_uid == '1.2.840.10008.5.1.4.1.1.128.1':
-            # PET Image Frame Type (M)
-            perframe_item.PETImageFrameTypeSequence = [
-                frame_type_item,
             ]
 
         # Frame VOI LUT (U)

@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence
 
+import pydicom
 from pydicom.datadict import tag_for_keyword
 from pydicom.dataset import Dataset
 from pydicom.encaps import encapsulate
@@ -281,7 +282,9 @@ def _convert_legacy_to_enhanced(
 
         # Derivation Image (C)
         try:
-            perframe_item.SourceImageSequence = ds.SourceImageSequence
+            derivation_image_sequence = pydicom.Dataset()
+            derivation_image_sequence.SourceImageSequence = ds.SourceImageSequence
+            perframe_item.DerivationImageSequence = [derivation_image_sequence,]
         except AttributeError:
             pass
 

@@ -169,7 +169,7 @@ def _convert_legacy_to_enhanced(
 
     # Per-Frame Functional Groups
     perframe_items = []
-    for ds in sf_datasets:
+    for frame_index, ds in enumerate(sf_datasets):
         perframe_item = Dataset()
 
         # Frame Content (M)
@@ -350,7 +350,8 @@ def _convert_legacy_to_enhanced(
                 mf_dataset.add(da)
             else:
                 if tag not in ignored_attributes:
-                    unassigned_dataelements[tag].append(da)
+                    unassigned_dataelements[tag].append((frame_index, da))
+
 
     # All remaining unassigned attributes will be collected in either the
     # UnassignedSharedConvertedAttributesSequence or the
@@ -362,12 +363,12 @@ def _convert_legacy_to_enhanced(
         for _ in range(len(sf_datasets))
     ]
     for _tag, dataelements in unassigned_dataelements.items():
-        values = [str(da.value) for da in dataelements]
+        values = [str(da.value) for _, da in dataelements]
         unique_values = set(values)
-        if len(unique_values) == 1:
-            unassigned_shared_ca_item.add(dataelements[0])
+        if len(dataelements) == len(sf_datasets) and len(unique_values) == 1:
+            unassigned_shared_ca_item.add(dataelements[0][1])
         else:
-            for i, da in enumerate(dataelements):
+            for i, da in dataelements:
                 unassigned_perframe_ca_items[i].add(da)
 
     mf_dataset.ImageType = list(list(unique_image_types)[0])

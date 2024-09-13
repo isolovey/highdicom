@@ -347,7 +347,23 @@ def _convert_legacy_to_enhanced(
             if tag in assigned_attributes:
                 continue
             elif tag in mf_attributes:
-                mf_dataset.add(da)
+                if (
+                        frame_index > 0  # ignore default value set outside this loop
+                        and tag in mf_dataset and mf_dataset[tag].value != ds[tag].value
+                ):
+                    # This attribute cannot stay in mf_dataset, because only one value will be written in the Enhanced
+                    # MR Image. It must be set in the Per-Frame Functional Groups sequence
+
+                    for i in range(frame_index):
+                        unassigned_dataelements[tag].append((i, mf_dataset[tag]))
+                    unassigned_dataelements[tag].append((frame_index, da))
+                    mf_attributes.remove(tag)
+
+                    # There is a value for this tag in mf_dataset. This will be saved at the base level of the Enhanced
+                    # dataset in order to make it compliant with the DICOM standard. The converter will overwrite
+                    # base-level attributes with Per-Frame attributes, if the latter are present.
+                else:
+                    mf_dataset.add(da)
             else:
                 if tag not in ignored_attributes:
                     unassigned_dataelements[tag].append((frame_index, da))

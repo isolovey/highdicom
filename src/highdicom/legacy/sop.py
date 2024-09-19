@@ -157,9 +157,11 @@ def _convert_legacy_to_enhanced(
         tag_for_keyword('RescaleType'),
     }
 
-    if ref_ds.ImageType[0] == 'ORIGINAL':
+    if 'ImageType' in ref_ds and ref_ds.ImageType[0] == 'ORIGINAL':
         mf_dataset.VolumeBasedCalculationTechnique = 'NONE'
     else:
+        # "A value of MIXED may be necessary if creating a Legacy Converted Enhanced image and insufficient information
+        # is present to specify a more specific value." (C.8.16.2.1.3)
         mf_dataset.VolumeBasedCalculationTechnique = 'MIXED'
 
     pixel_representation = sf_datasets[0].PixelRepresentation
@@ -209,8 +211,8 @@ def _convert_legacy_to_enhanced(
             pixel_measures_item,
         ]
 
-        frame_type = list(ds.ImageType)
-        if len(frame_type) < 4:
+        frame_type = list(ds.ImageType) if 'ImageType' in ds else list()
+        if 0 < len(frame_type) < 4:
             if frame_type[0] == 'ORIGINAL':
                 frame_type.append('NONE')
             else:
@@ -224,7 +226,7 @@ def _convert_legacy_to_enhanced(
         else:
             frame_type_item.PixelPresentation = 'COLOR'
         frame_type_item.VolumetricProperties = volumetric_properties
-        if frame_type[0] == 'ORIGINAL':
+        if len(frame_type) > 0 and frame_type[0] == 'ORIGINAL':
             frame_type_item.VolumeBasedCalculationTechnique = 'NONE'
         else:
             frame_type_item.VolumeBasedCalculationTechnique = 'MIXED'

@@ -99,8 +99,6 @@ def _convert_legacy_to_enhanced(
 
     sop_class_uid = LEGACY_ENHANCED_SOP_CLASS_UID_MAP[ref_ds.SOPClassUID]
 
-    mf_dataset.NumberOfFrames = len(sf_datasets)
-
     # We will ignore some attributes, because they will get assigned new
     # values in the legacy converted enhanced image instance.
     ignored_attributes = {
@@ -156,13 +154,6 @@ def _convert_legacy_to_enhanced(
         tag_for_keyword('RescaleSlope'),
         tag_for_keyword('RescaleType'),
     }
-
-    if 'ImageType' in ref_ds and ref_ds.ImageType[0] == 'ORIGINAL':
-        mf_dataset.VolumeBasedCalculationTechnique = 'NONE'
-    else:
-        # "A value of MIXED may be necessary if creating a Legacy Converted Enhanced image and insufficient information
-        # is present to specify a more specific value." (C.8.16.2.1.3)
-        mf_dataset.VolumeBasedCalculationTechnique = 'MIXED'
 
     pixel_representation = sf_datasets[0].PixelRepresentation
     volumetric_properties = 'VOLUME'
@@ -370,6 +361,27 @@ def _convert_legacy_to_enhanced(
                 if tag not in ignored_attributes:
                     unassigned_dataelements[tag].append((frame_index, da))
 
+    # Remove attributes from mf_dataset that are absent in one or more frames
+    mf_dataset_tags = [k for k in mf_dataset.keys()]
+    for tag in mf_dataset_tags:
+        if any(tag not in ds for ds in sf_datasets):
+            del mf_dataset[tag]
+            if tag in unassigned_dataelements:
+                unassigned_dataelements[tag] = list()
+            for fi in range(len(sf_datasets)):
+                if tag in sf_datasets[fi]:
+                    unassigned_dataelements[tag].append((fi, sf_datasets[fi][tag]))
+
+    # Assign default values if not set
+    if 'NumberOfFrames' not in mf_dataset:
+        mf_dataset.NumberOfFrames = len(sf_datasets)
+    if 'VolumeBasedCalculationTechnique' not in mf_dataset:
+        if 'ImageType' in ref_ds and ref_ds.ImageType[0] == 'ORIGINAL':
+            mf_dataset.VolumeBasedCalculationTechnique = 'NONE'
+        else:
+            # "A value of MIXED may be necessary if creating a Legacy Converted Enhanced image and insufficient information
+            # is present to specify a more specific value." (C.8.16.2.1.3)
+            mf_dataset.VolumeBasedCalculationTechnique = 'MIXED'
 
     # All remaining unassigned attributes will be collected in either the
     # UnassignedSharedConvertedAttributesSequence or the

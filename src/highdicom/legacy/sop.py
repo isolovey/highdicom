@@ -110,7 +110,7 @@ def _convert_legacy_to_enhanced(
         tag_for_keyword('SeriesInstanceUID'),
     }
 
-    mf_attributes = []
+    mf_attributes = set()
     iod_key = SOP_CLASS_UID_IOD_KEY_MAP[sop_class_uid]
     for module_item in IOD_MODULE_MAP[iod_key]:
         module_key = module_item['key']
@@ -121,7 +121,7 @@ def _convert_legacy_to_enhanced(
             tag = tag_for_keyword(attr_item['keyword'])
             if tag in ignored_attributes:
                 continue
-            mf_attributes.append(tag)
+            mf_attributes.add(tag)
 
     # Assign attributes that are not defined at the root level of the
     # Lecacy Converted Enhanced MR/CT/PET Image IOD to the appropriate

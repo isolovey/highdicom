@@ -171,6 +171,10 @@ def _convert_legacy_to_enhanced(
         frame_content_item = Dataset()
         if 'AcquisitionDate' in ds and 'AcquisitionTime' in ds:
             frame_content_item.FrameAcquisitionDateTime = ds.AcquisitionDate + ds.AcquisitionTime
+        elif 'AcquisitionDate' in ds:
+            unassigned_dataelements[Tag('AcquisitionDate')].append((frame_index, ds['AcquisitionDate']))
+        elif 'AcquisitionTime' in ds:
+            unassigned_dataelements[Tag('AcquisitionTime')].append((frame_index, ds['AcquisitionTime']))
         frame_content_item.FrameAcquisitionNumber = ds.InstanceNumber
         perframe_item.FrameContentSequence = [
             frame_content_item,

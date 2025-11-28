@@ -218,10 +218,14 @@ def _convert_legacy_to_enhanced(
         unique_image_types.add(tuple(frame_type))
         frame_type_item = Dataset()
         frame_type_item.FrameType = frame_type
-        if pixel_representation == 0:
-            frame_type_item.PixelPresentation = 'MONOCHROME'
-        else:
+        if pixel_representation == 1 and all(k in sf_datasets[0] for k in (
+                'RedPaletteColorLookupTableData',
+                'GreenPaletteColorLookupTableData',
+                'BluePaletteColorLookupTableData'
+        )):
             frame_type_item.PixelPresentation = 'COLOR'
+        else:
+            frame_type_item.PixelPresentation = 'MONOCHROME'
         frame_type_item.VolumetricProperties = volumetric_properties
         if len(frame_type) > 0 and frame_type[0] == 'ORIGINAL':
             frame_type_item.VolumeBasedCalculationTechnique = 'NONE'
@@ -410,10 +414,14 @@ def _convert_legacy_to_enhanced(
     mf_dataset.ImageType = list(list(unique_image_types)[0])
     if len(unique_image_types) > 1:
         mf_dataset.ImageType[2] = 'MIXED'
-    if pixel_representation == 0:
-        mf_dataset.PixelPresentation = 'MONOCHROME'
-    else:
+    if pixel_representation == 1 and all(k in sf_datasets[0] for k in (
+            'RedPaletteColorLookupTableData',
+            'GreenPaletteColorLookupTableData',
+            'BluePaletteColorLookupTableData'
+    )):
         mf_dataset.PixelPresentation = 'COLOR'
+    else:
+        mf_dataset.PixelPresentation = 'MONOCHROME'
     mf_dataset.VolumetricProperties = volumetric_properties
 
     # Shared Functional Groups

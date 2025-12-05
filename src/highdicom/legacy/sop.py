@@ -2,6 +2,7 @@
 
 import logging
 from collections import defaultdict
+from copy import deepcopy
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
@@ -366,7 +367,7 @@ def _convert_legacy_to_enhanced(
                     # dataset in order to make it compliant with the DICOM standard. The converter will overwrite
                     # base-level attributes with Per-Frame attributes, if the latter are present.
                 else:
-                    mf_dataset.add(da)
+                    mf_dataset.add(deepcopy(da))
             else:
                 if tag not in ignored_attributes:
                     unassigned_dataelements[tag].append((frame_index, da))
